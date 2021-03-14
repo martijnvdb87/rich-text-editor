@@ -114,6 +114,79 @@ window.RichTextEditor = (element) => {
         selection.addRange(range);
     };
 
+    const deleteSelected = () => {
+        let firstCaret = Math.min(caretPosition.anchor, caretPosition.focus);
+        let lastCaret = Math.max(caretPosition.anchor, caretPosition.focus);
+
+        let position = 0;
+
+        let firstPosition;
+        let lastPosition;
+
+        let firstBlock;
+        let lastBlock;
+
+        for (let i = 0; i < blocks.length; i++) {
+            if (i > 0) {
+                position++;
+            }
+
+            const block = blocks[i];
+            for (let x = 0; x < block.nodes.length; x++) {
+                const node = block.nodes[x];
+                position += node.value.length;
+
+                let firstCaretInNode = false;
+                let lastCaretInNode = false;
+
+                if (firstPosition == null && position >= firstCaret) {
+                    firstBlock = i;
+                    firstCaretInNode = true;
+                    firstPosition = firstCaret - (position - node.value.length);
+                }
+
+                if (lastPosition == null && position >= lastCaret) {
+                    lastBlock = i;
+                    lastCaretInNode = true;
+                    lastPosition = lastCaret - (position - node.value.length);
+                }
+
+                if (firstPosition != null) {
+                    if (firstCaretInNode && lastCaretInNode) {
+                        node.value = node.value.slice(0, firstPosition) + node.value.slice(lastPosition);
+
+                    } else if (firstCaretInNode && !lastCaretInNode) {
+                        node.value = node.value.slice(0, firstPosition);
+
+                    } else if (!firstCaretInNode && lastCaretInNode) {
+                        node.value = node.value.slice(lastPosition);
+
+                    } else if (!firstCaretInNode && !lastCaretInNode) {
+                        block.nodes.splice(x, 1);
+                        x--;
+                    }
+                }
+
+                if (lastCaretInNode) {
+
+                    i = blocks.length;
+
+                    for (let y = firstBlock + 1; y < lastBlock; y++) {
+                        blocks.splice(y, 1);
+                        lastBlock--;
+                    }
+
+                    if (!(firstCaretInNode && lastCaretInNode)) {
+                        blocks[firstBlock].nodes = [...blocks[firstBlock].nodes, ...blocks[lastBlock].nodes];
+                        blocks.splice(lastBlock, 1);
+                    }
+
+                    break;
+                }
+            };
+        };
+    };
+
     const insertText = (index, value) => {
         let position = 0;
 
@@ -212,12 +285,17 @@ window.RichTextEditor = (element) => {
     }
 
     editorContent.oninput = (e) => {
-        console.log(e);
+        let isCollapsed = caretPosition.anchor == caretPosition.focus;
 
         if (e.inputType === 'insertText') {
-            insertText(caretPosition.focus, e.data);
+            if (!isCollapsed) {
+                deleteSelected();
+            }
+
+            const newCaretPosition = Math.min(caretPosition.anchor, caretPosition.focus);
+            insertText(newCaretPosition, e.data);
             setEditorContent(buildHtml());
-            setCaretPosition(caretPosition.focus + e.data.length);
+            setCaretPosition(newCaretPosition + e.data.length);
 
         } else if (e.inputType === 'insertParagraph') {
 
@@ -226,12 +304,27 @@ window.RichTextEditor = (element) => {
 
 
         } else if (e.inputType === 'deleteContentBackward') {
-
+            if (isCollapsed) {
+                setEditorContent(buildHtml());
+                setCaretPosition(Math.min(caretPosition.anchor, caretPosition.focus));
+            } else {
+                deleteSelected();
+                setEditorContent(buildHtml());
+                setCaretPosition(Math.min(caretPosition.anchor, caretPosition.focus));
+            }
 
         } else if (e.inputType === 'deleteContentForward') {
+            if (isCollapsed) {
+                setEditorContent(buildHtml());
+                setCaretPosition(Math.min(caretPosition.anchor, caretPosition.focus));
+            } else {
+                deleteSelected();
+                setEditorContent(buildHtml());
+                setCaretPosition(Math.min(caretPosition.anchor, caretPosition.focus));
+            }
 
-
-        } else if (e.inputType === 'insertFromPaste') {
+        } else
+        if (e.inputType === 'insertFromPaste') {
 
 
         }
