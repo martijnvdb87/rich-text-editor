@@ -1,5 +1,3 @@
-import _editor from './editor';
-
 window.RichTextEditor = (element) => {
     let value = element.value;
 
@@ -72,10 +70,10 @@ window.RichTextEditor = (element) => {
     };
 
     const setCaretPosition = (focusIndex = false, anchorIndex = false) => {
-        if (focusIndex && !anchorIndex) {
+        if (focusIndex !== false && anchorIndex === false) {
             anchorIndex = focusIndex;
 
-        } else if (!focusIndex) {
+        } else if (focusIndex === false) {
             focusIndex = caretPosition.focus;
             anchorIndex = caretPosition.anchor;
         }
@@ -83,32 +81,11 @@ window.RichTextEditor = (element) => {
         let range = document.createRange();
         let selection = window.getSelection();
 
-        let startPosition;
-        let endPosition;
+        const { node: focusNode, position: focusPosition } = getCaretPositionInfo(focusIndex);
+        range.setEnd(focusNode.element, focusPosition);
 
-        let position = 0;
-
-        for (let i = 0; i < blocks.length; i++) {
-            if (i > 0) {
-                position++;
-            }
-
-            const block = blocks[i];
-            for (let x = 0; x < block.nodes.length; x++) {
-                const node = block.nodes[x];
-                position += node.value.length;
-
-                if (endPosition == null && position >= focusIndex) {
-                    endPosition = (focusIndex - (position - node.value.length)), node.element;
-                    range.setEnd(node.element, endPosition);
-                }
-
-                if (startPosition == null && position >= anchorIndex) {
-                    startPosition = (anchorIndex - (position - node.value.length));
-                    range.setStart(node.element, startPosition);
-                }
-            };
-        };
+        const { node: anchorNode, position: anchorPosition } = getCaretPositionInfo(anchorIndex);
+        range.setStart(anchorNode.element, anchorPosition);
 
         selection.removeAllRanges();
         selection.addRange(range);
@@ -188,6 +165,11 @@ window.RichTextEditor = (element) => {
     };
 
     const insertText = (index, value) => {
+        const { node, position } = getCaretPositionInfo(index);
+        node.value = node.value.slice(0, position) + value + node.value.slice(position);
+    }
+
+    const getCaretPositionInfo = (index) => {
         let position = 0;
 
         for (let i = 0; i < blocks.length; i++) {
@@ -204,14 +186,24 @@ window.RichTextEditor = (element) => {
                     position -= node.value.length;
                     position = index - position;
 
-                    node.value = node.value.slice(0, position) + value + node.value.slice(position);
-
-                    i = blocks.length;
-                    return;
+                    return {
+                        node,
+                        position
+                    };
                 }
             };
         };
-    }
+    };
+
+    const deleteContentBackward = () => {
+        const { node, position } = getCaretPositionInfo(caretPosition.focus - 1);
+        node.value = node.value.slice(0, position) + node.value.slice(position + 1);
+    };
+
+    const deleteContentForward = () => {
+        const { node, position } = getCaretPositionInfo(caretPosition.focus);
+        node.value = node.value.slice(0, position) + node.value.slice(position + 1);
+    };
 
     const parseBlocks = (content = false) => {
         if (!content) {
@@ -286,16 +278,15 @@ window.RichTextEditor = (element) => {
 
     editorContent.oninput = (e) => {
         let isCollapsed = caretPosition.anchor == caretPosition.focus;
+        let newCaretPosition = Math.min(caretPosition.anchor, caretPosition.focus);
 
         if (e.inputType === 'insertText') {
             if (!isCollapsed) {
                 deleteSelected();
             }
 
-            const newCaretPosition = Math.min(caretPosition.anchor, caretPosition.focus);
             insertText(newCaretPosition, e.data);
-            setEditorContent(buildHtml());
-            setCaretPosition(newCaretPosition + e.data.length);
+            newCaretPosition += e.data.length;
 
         } else if (e.inputType === 'insertParagraph') {
 
@@ -305,28 +296,28 @@ window.RichTextEditor = (element) => {
 
         } else if (e.inputType === 'deleteContentBackward') {
             if (isCollapsed) {
-                setEditorContent(buildHtml());
-                setCaretPosition(Math.min(caretPosition.anchor, caretPosition.focus));
+                deleteContentBackward();
+                newCaretPosition = caretPosition.focus - 1;
+
             } else {
                 deleteSelected();
-                setEditorContent(buildHtml());
-                setCaretPosition(Math.min(caretPosition.anchor, caretPosition.focus));
             }
 
         } else if (e.inputType === 'deleteContentForward') {
             if (isCollapsed) {
-                setEditorContent(buildHtml());
-                setCaretPosition(Math.min(caretPosition.anchor, caretPosition.focus));
+                deleteContentForward();
+                newCaretPosition = caretPosition.focus;
+
             } else {
                 deleteSelected();
-                setEditorContent(buildHtml());
-                setCaretPosition(Math.min(caretPosition.anchor, caretPosition.focus));
             }
 
-        } else
-        if (e.inputType === 'insertFromPaste') {
+        } else if (e.inputType === 'insertFromPaste') {
 
 
         }
+
+        setEditorContent(buildHtml());
+        setCaretPosition(newCaretPosition);
     }
 };
