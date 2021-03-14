@@ -1,0 +1,239 @@
+import _editor from './editor';
+
+window.RichTextEditor = (element) => {
+    let value = element.value;
+
+    let caretPosition = {
+        anchor: null,
+        focus: null
+    };
+
+    let editor;
+    let editorContent;
+
+    let blocks = [];
+
+    const buildHtml = () => {
+        let container = document.createElement('div');
+
+        blocks.forEach(block => {
+            const newBlock = document.createElement(block.type);
+
+            block.nodes.forEach(node => {
+                const newNode = document.createTextNode(node.value)
+                newBlock.append(newNode);
+            });
+
+
+            container.append(newBlock);
+        });
+
+        return container.innerHTML;
+    };
+
+    const getCaretPosition = () => {
+        let selection = window.getSelection();
+
+        let position = 0;
+
+        caretPosition = {
+            anchor: null,
+            focus: null
+        };
+
+        for (let i = 0; i < blocks.length; i++) {
+            if (i > 0) {
+                position++;
+            }
+
+            const block = blocks[i];
+            for (let x = 0; x < block.nodes.length; x++) {
+                const node = block.nodes[x];
+                if (selection.anchorNode === node.element) {
+                    caretPosition.anchor = position + selection.anchorOffset;
+                }
+                if (selection.focusNode === node.element) {
+                    caretPosition.focus = position + selection.focusOffset;
+                }
+
+                if (caretPosition.anchor != null && caretPosition.focus != null) {
+                    break;
+                }
+
+                position += node.value.length;
+            }
+
+            if (caretPosition.anchor != null && caretPosition.focus != null) {
+                break;
+            }
+        }
+
+        return caretPosition;
+    };
+
+    const setCaretPosition = (focusIndex = false, anchorIndex = false) => {
+        if (focusIndex && !anchorIndex) {
+            anchorIndex = focusIndex;
+
+        } else if (!focusIndex) {
+            focusIndex = caretPosition.focus;
+            anchorIndex = caretPosition.anchor;
+        }
+
+        let range = document.createRange();
+        let selection = window.getSelection();
+
+        let startPosition;
+        let endPosition;
+
+        let position = 0;
+
+        for (let i = 0; i < blocks.length; i++) {
+            if (i > 0) {
+                position++;
+            }
+
+            const block = blocks[i];
+            for (let x = 0; x < block.nodes.length; x++) {
+                const node = block.nodes[x];
+                position += node.value.length;
+
+                if (endPosition == null && position >= focusIndex) {
+                    endPosition = (focusIndex - (position - node.value.length)), node.element;
+                    range.setEnd(node.element, endPosition);
+                }
+
+                if (startPosition == null && position >= anchorIndex) {
+                    startPosition = (anchorIndex - (position - node.value.length));
+                    range.setStart(node.element, startPosition);
+                }
+            };
+        };
+
+        selection.removeAllRanges();
+        selection.addRange(range);
+    };
+
+    const insertText = (index, value) => {
+        let position = 0;
+
+        for (let i = 0; i < blocks.length; i++) {
+            if (i > 0) {
+                position++;
+            }
+
+            const block = blocks[i];
+            for (let x = 0; x < block.nodes.length; x++) {
+                const node = block.nodes[x];
+                position += node.value.length;
+
+                if (position >= index) {
+                    position -= node.value.length;
+                    position = index - position;
+
+                    node.value = node.value.slice(0, position) + value + node.value.slice(position);
+
+                    i = blocks.length;
+                    return;
+                }
+            };
+        };
+    }
+
+    const parseBlocks = (content = false) => {
+        if (!content) {
+            content = editorContent;
+        }
+
+        blocks = [];
+
+        [...content.children].forEach(child => {
+            blocks.push({
+                element: child,
+                type: child.nodeName,
+                nodes: parseNodes(child)
+            });
+        });
+    };
+
+    const parseNodes = (node) => {
+        const nodes = [];
+
+        const findNodes = (parent) => {
+            parent.childNodes.forEach(child => {
+                if (child.nodeType == 3) {
+                    const value = child.nodeValue;
+
+                    nodes.push({
+                        element: child,
+                        value: value
+                    });
+                } else {
+                    findNodes(child);
+                }
+            })
+        };
+
+        findNodes(node);
+
+        return nodes;
+    };
+
+    const getEditorContent = (value) => {
+        return editorContent.innerHTML;
+    };
+
+    const setEditorContent = (value) => {
+        editorContent.innerHTML = value;
+        parseBlocks();
+    };
+
+    const createEditor = () => {
+        editor = document.createElement('div');
+
+        editorContent = document.createElement('div');
+        editorContent.contentEditable = true;
+        editorContent.style.whiteSpace = 'break-spaces';
+        editor.append(editorContent);
+
+        element.parentElement.insertBefore(editor, element);
+
+        const container = document.createElement('div');
+        container.innerHTML = value;
+
+        parseBlocks(container);
+        setEditorContent(buildHtml());
+    };
+
+    createEditor();
+
+    editorContent.onkeydown = (e) => {
+        getCaretPosition();
+    }
+
+    editorContent.oninput = (e) => {
+        console.log(e);
+
+        if (e.inputType === 'insertText') {
+            insertText(caretPosition.focus, e.data);
+            setEditorContent(buildHtml());
+            setCaretPosition(caretPosition.focus + e.data.length);
+
+        } else if (e.inputType === 'insertParagraph') {
+
+
+        } else if (e.inputType === 'insertLineBreak') {
+
+
+        } else if (e.inputType === 'deleteContentBackward') {
+
+
+        } else if (e.inputType === 'deleteContentForward') {
+
+
+        } else if (e.inputType === 'insertFromPaste') {
+
+
+        }
+    }
+};

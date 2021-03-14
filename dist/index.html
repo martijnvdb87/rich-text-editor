@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Hello Webpack</title>
+</head>
+
+<body>
+    <textarea id="editor">
+        <h1>Lorem ipsum dolor sit amet</h1>
+        <p>Consectetur <b>adipiscing</b> elit. Donec venenatis facilisis finibus.</p>
+        <p>Mauris mattis molestie arcu at porttitor. Sed sodales consequat urna, nec fermentum ipsum aliquet eget. In viverra ultricies nisi ut tempor. Ut non orci lorem. Aliquam vitae molestie metus. Sed ut magna nibh. Vivamus vel eros id est sagittis aliquet.</p>
+    </textarea>
+    <script src="./bundle.js"></script>
+    <script>
+        var editor = document.getElementById('editor');
+        var RichTextEditor = RichTextEditor(editor);
+    </script>
+</body>
+
+</html>
