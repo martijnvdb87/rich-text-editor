@@ -195,6 +195,26 @@ window.RichTextEditor = (element) => {
         };
     };
 
+    const getCaretPositionBlock = (index) => {
+        let position = 0;
+
+        for (let i = 0; i < blocks.length; i++) {
+            if (i > 0) {
+                position++;
+            }
+            const block = blocks[i];
+            for (let x = 0; x < block.nodes.length; x++) {
+                const node = block.nodes[x];
+
+                if (position <= index && index <= position + node.value.length) {
+                    return block;
+                }
+
+                position += node.value.length;
+            }
+        };
+    };
+
     const deleteContentBackward = () => {
         const { node, position } = getCaretPositionInfo(caretPosition.focus - 1);
         node.value = node.value.slice(0, position) + node.value.slice(position + 1);
@@ -296,31 +316,8 @@ window.RichTextEditor = (element) => {
 
         } else if (e.inputType === 'deleteContentBackward') {
             if (isCollapsed) {
-
-                let position = 0;
-
-                let firstCaretInNode = false;
-                let lastCaretInNode = false;
-
-                for (let i = 0; i < blocks.length; i++) {
-                    if (i > 0) {
-                        position++;
-                    }
-                    const block = blocks[i];
-                    for (let x = 0; x < block.nodes.length; x++) {
-                        const node = block.nodes[x];
-
-                        if (position <= caretPosition.focus && caretPosition.focus <= position + node.value.length) {
-                            lastCaretInNode = block;
-                        }
-
-                        if (position <= caretPosition.focus - 1 && caretPosition.focus - 1 <= position + node.value.length) {
-                            firstCaretInNode = block;
-                        }
-
-                        position += node.value.length;
-                    }
-                }
+                let firstCaretInNode = getCaretPositionBlock(caretPosition.focus - 1);
+                let lastCaretInNode = getCaretPositionBlock(caretPosition.focus);
 
                 deleteContentBackward();
                 newCaretPosition = caretPosition.focus - 1;
