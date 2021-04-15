@@ -18,8 +18,29 @@ window.RichTextEditor = (element) => {
             const newBlock = document.createElement(block.type);
 
             block.nodes.forEach(node => {
-                const newNode = document.createTextNode(node.value)
-                newBlock.append(newNode);
+                let parentNode;
+                let lastNode;
+                node.types.forEach(type => {
+                    newNode = document.createElement(type);
+
+                    if (lastNode) {
+                        lastNode.append(newNode);
+                    } else {
+                        parentNode = newNode
+                    }
+
+                    lastNode = newNode;
+                });
+
+                newNode = document.createTextNode(node.value);
+
+                if (lastNode) {
+                    lastNode.append(newNode);
+                } else {
+                    parentNode = newNode
+                }
+
+                newBlock.append(parentNode);
             });
 
 
@@ -238,17 +259,18 @@ window.RichTextEditor = (element) => {
     const parseNodes = (node) => {
         const nodes = [];
 
-        const findNodes = (parent) => {
+        const findNodes = (parent, types = []) => {
             parent.childNodes.forEach(child => {
                 if (child.nodeType == 3) {
                     const value = child.nodeValue;
 
                     nodes.push({
                         element: child,
+                        types: types,
                         value: value
                     });
                 } else {
-                    findNodes(child);
+                    findNodes(child, [...types, child.nodeName]);
                 }
             });
         };
