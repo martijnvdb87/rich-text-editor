@@ -29,8 +29,22 @@ window.RichTextEditor = (element) => {
         return container.innerHTML;
     };
 
+    const currentTextNode = () => {
+        let { anchorNode, focusNode, anchorOffset, focusOffset } = window.getSelection();
+
+        if (anchorNode.nodeType !== 3) {
+            anchorNode = [...anchorNode.childNodes].find(node => node.nodeType === 3);
+        }
+
+        if (focusNode.nodeType !== 3) {
+            focusNode = [...focusNode.childNodes].find(node => node.nodeType === 3);
+        }
+
+        return { anchorNode, focusNode, anchorOffset, focusOffset }
+    }
+
     const getCaretPosition = () => {
-        let selection = window.getSelection();
+        let { anchorNode, focusNode, anchorOffset, focusOffset } = currentTextNode();
 
         let position = 0;
 
@@ -40,18 +54,15 @@ window.RichTextEditor = (element) => {
         };
 
         for (let i = 0; i < blocks.length; i++) {
-            if (i > 0) {
-                position++;
-            }
-
             const block = blocks[i];
             for (let x = 0; x < block.nodes.length; x++) {
                 const node = block.nodes[x];
-                if (selection.anchorNode === node.element) {
-                    caretPosition.anchor = position + selection.anchorOffset;
+
+                if (anchorNode === node.element) {
+                    caretPosition.anchor = position + anchorOffset;
                 }
-                if (selection.focusNode === node.element) {
-                    caretPosition.focus = position + selection.focusOffset;
+                if (focusNode === node.element) {
+                    caretPosition.focus = position + focusOffset;
                 }
 
                 if (caretPosition.anchor != null && caretPosition.focus != null) {
@@ -64,6 +75,8 @@ window.RichTextEditor = (element) => {
             if (caretPosition.anchor != null && caretPosition.focus != null) {
                 break;
             }
+
+            position++;
         }
 
         return caretPosition;
@@ -80,7 +93,6 @@ window.RichTextEditor = (element) => {
 
         let range = document.createRange();
         let selection = window.getSelection();
-
         const { node: focusNode, position: focusPosition } = getCaretPositionInfo(focusIndex);
         range.setEnd(focusNode.element, focusPosition);
 
@@ -171,47 +183,29 @@ window.RichTextEditor = (element) => {
 
     const getCaretPositionInfo = (index) => {
         let position = 0;
-
         for (let i = 0; i < blocks.length; i++) {
-            if (i > 0) {
-                position++;
-            }
+            let block = blocks[i];
 
-            const block = blocks[i];
             for (let x = 0; x < block.nodes.length; x++) {
                 const node = block.nodes[x];
-                position += node.value.length;
+                const nodeLength = node.value.length;
+                position += nodeLength;
 
                 if (position >= index) {
-                    position -= node.value.length;
+                    position -= nodeLength;
                     position = index - position;
 
                     return {
+                        position,
+                        block,
+                        blockIndex: i,
                         node,
-                        position
+                        nodeIndex: x,
                     };
                 }
             };
-        };
-    };
 
-    const getCaretPositionBlock = (index) => {
-        let position = 0;
-
-        for (let i = 0; i < blocks.length; i++) {
-            if (i > 0) {
-                position++;
-            }
-            const block = blocks[i];
-            for (let x = 0; x < block.nodes.length; x++) {
-                const node = block.nodes[x];
-
-                if (position <= index && index <= position + node.value.length) {
-                    return block;
-                }
-
-                position += node.value.length;
-            }
+            position++;
         };
     };
 
@@ -256,10 +250,22 @@ window.RichTextEditor = (element) => {
                 } else {
                     findNodes(child);
                 }
-            })
+            });
         };
 
         findNodes(node);
+
+        if (nodes.length === 0) {
+            const breakNode = document.createElement('BR');
+            const textNode = document.createTextNode('');
+            node.append(breakNode);
+            node.append(textNode);
+
+            nodes.push({
+                element: textNode,
+                value: ''
+            });
+        }
 
         return nodes;
     };
@@ -309,15 +315,39 @@ window.RichTextEditor = (element) => {
             newCaretPosition += e.data.length;
 
         } else if (e.inputType === 'insertParagraph') {
+            if (!isCollapsed) {
+                deleteSelected();
+            }
 
+            let { position, node, nodeIndex, block, blockIndex } = getCaretPositionInfo(newCaretPosition);
+
+            let firstNode = {...node };
+            let lastNode = {...node };
+
+            let firstBlockNodes = block.nodes.filter((blockNode, index) => index < nodeIndex);
+            let lastBlockNodes = block.nodes.filter((blockNode, index) => nodeIndex < index);
+
+            firstNode.value = firstNode.value.slice(0, position);
+            lastNode.value = lastNode.value.slice(position);
+
+            firstBlockNodes.push(firstNode);
+            lastBlockNodes.unshift(lastNode);
+
+            let firstBlock = {...block, nodes: firstBlockNodes };
+            let lastBlock = {...block, nodes: lastBlockNodes };
+
+            blocks.splice(blockIndex, 1, lastBlock);
+            blocks.splice(blockIndex, 0, firstBlock);
+
+            newCaretPosition = newCaretPosition + 1;
 
         } else if (e.inputType === 'insertLineBreak') {
 
 
         } else if (e.inputType === 'deleteContentBackward') {
             if (isCollapsed) {
-                let firstCaretInNode = getCaretPositionBlock(caretPosition.focus - 1);
-                let lastCaretInNode = getCaretPositionBlock(caretPosition.focus);
+                let { block: firstCaretInNode } = getCaretPositionInfo(caretPosition.focus - 1);
+                let { block: lastCaretInNode } = getCaretPositionInfo(caretPosition.focus);
 
                 deleteContentBackward();
                 newCaretPosition = caretPosition.focus - 1;
