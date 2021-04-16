@@ -45,9 +45,9 @@ window.RichTextEditor = (element) => {
                 }
 
                 if(blockValue === '') {
-                    const blockBreak = document.createElement('BR');
-
-                    newBlock.append(blockBreak);
+                    const emptyNode = document.createElement('BR');
+                    newBlock.append(emptyNode);
+                    newBlock.className = 'empty-block';
                 } else {
                     newBlock.append(parentNode);
                 }
