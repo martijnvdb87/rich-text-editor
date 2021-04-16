@@ -17,7 +17,8 @@ window.RichTextEditor = (element) => {
         blocks.forEach((block) => {
             const newBlock = document.createElement(block.type);
 
-            let blockValue = '';
+            let blockValue = "";
+            let hasEmptyNode = false;
 
             block.nodes.forEach((node) => {
                 let parentNode;
@@ -44,10 +45,13 @@ window.RichTextEditor = (element) => {
                     parentNode = newNode;
                 }
 
-                if(blockValue === '') {
-                    const emptyNode = document.createElement('BR');
-                    newBlock.append(emptyNode);
-                    newBlock.className = 'empty-block';
+                if (blockValue === "") {
+                    if (!hasEmptyNode) {
+                        const emptyNode = document.createElement("BR");
+                        newBlock.append(emptyNode);
+                        newBlock.className = "empty-block";
+                        hasEmptyNode = true;
+                    }
                 } else {
                     newBlock.append(parentNode);
                 }
@@ -240,7 +244,7 @@ window.RichTextEditor = (element) => {
 
         for (let i = 0; i < blocks.length; i++) {
             let block = blocks[i];
-            let blockValue = '';
+            let blockValue = "";
 
             for (let x = 0; x < block.nodes.length; x++) {
                 const node = block.nodes[x];
@@ -318,13 +322,13 @@ window.RichTextEditor = (element) => {
         findNodes(node);
 
         if (nodes.length === 0) {
-            const textNode = document.createTextNode('');
+            const textNode = document.createTextNode("");
             node.append(textNode);
 
             nodes.push({
                 element: textNode,
                 types: [],
-                value: ''
+                value: "",
             });
         }
 
@@ -413,7 +417,6 @@ window.RichTextEditor = (element) => {
             blocks.splice(blockIndex, 0, firstBlock);
 
             newCaretPosition = newCaretPosition + 1;
-
         } else if (e.inputType === "insertLineBreak") {
         } else if (e.inputType === "deleteContentBackward") {
             if (isCollapsed) {
