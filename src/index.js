@@ -85,24 +85,24 @@ window.RichTextEditor = (element) => {
                 if (child.nodeType == 3) {
                     const value = child.nodeValue;
 
-                    if(anchorNode === child) {
+                    if (anchorNode === child) {
                         positions.anchor = nodeValues.join('').length + anchorOffset;
                     }
 
-                    if(focusNode === child) {
+                    if (focusNode === child) {
                         positions.focus = nodeValues.join('').length + focusOffset;
                     }
 
-                    if(positions.anchor && positions.focus) {
+                    if (positions.anchor && positions.focus) {
                         break;
                     }
-                    nodeValues.push(value);
 
+                    nodeValues.push(value);
                 } else {
                     positions = find(child, positions, nodeValues);
-                    
+
                     // Add extra whitespace if current element is a block element
-                    if(window.getComputedStyle(child, null).getPropertyValue('display') === 'block') {
+                    if (window.getComputedStyle(child, null).getPropertyValue('display') === 'block') {
                         nodeValues.push(' ');
                     }
                 }
@@ -116,25 +116,67 @@ window.RichTextEditor = (element) => {
         return caretPosition;
     };
 
-    const setCaretPosition = (focusIndex = false, anchorIndex = false) => {
-        if (focusIndex !== false && anchorIndex === false) {
+    const setCaretPosition = (focusIndex = null, anchorIndex = null) => {
+        // Fill empty arguments
+        if (focusIndex !== null && anchorIndex === null) {
             anchorIndex = focusIndex;
-        } else if (focusIndex === false) {
+        } else if (focusIndex === null) {
             focusIndex = caretPosition.focus;
             anchorIndex = caretPosition.anchor;
         }
+        
+        const find = (parent, positions, nodeValues = []) => {
+            for (let i = 0; i < parent.childNodes.length; i++) {
+                const child = parent.childNodes[i];
+
+                if (child.nodeType == 3) {
+                    const value = child.nodeValue;
+                    const nextNodeValueLength = [...nodeValues, value].join('').length;
+
+                    if (!positions.focus && focusIndex <= nextNodeValueLength) {
+                        positions.focus = {
+                            node: child,
+                            offset: focusIndex - nodeValues.join('').length
+                        };
+                    }
+
+                    if (!positions.anchor && anchorIndex <= nextNodeValueLength) {
+                        positions.anchor = {
+                            node: child,
+                            offset: anchorIndex - nodeValues.join('').length
+                        };
+                    }
+
+                    if (positions.anchor && positions.focus) {
+                        break;
+                    }
+                    
+                    nodeValues.push(value);
+
+                } else {
+                    positions = find(child, positions, nodeValues);
+
+                    // Add extra whitespace if current element is a block element
+                    if (window.getComputedStyle(child, null).getPropertyValue('display') === 'block') {
+                        nodeValues.push(' ');
+                    }
+                }
+            }
+
+            return positions;
+        };
+        
+        const positions = (find(editorContent, { anchor: null, focus: null }));
 
         let range = document.createRange();
         let selection = window.getSelection();
-        const { node: focusNode, position: focusPosition } = getCaretPositionInfo(focusIndex);
-        range.setEnd(focusNode.element, focusPosition);
 
-        const { node: anchorNode, position: anchorPosition } = getCaretPositionInfo(anchorIndex);
-        range.setStart(anchorNode.element, anchorPosition);
+        range.setEnd(positions.focus.node, positions.focus.offset);
+        range.setStart(positions.anchor.node, positions.anchor.offset);
 
         selection.removeAllRanges();
         selection.addRange(range);
-    };
+    }
 
     const deleteSelected = () => {
         let firstCaret = Math.min(caretPosition.anchor, caretPosition.focus);
@@ -215,11 +257,9 @@ window.RichTextEditor = (element) => {
 
         for (let i = 0; i < blocks.length; i++) {
             let block = blocks[i];
-            let blockValue = '';
 
             for (let x = 0; x < block.nodes.length; x++) {
                 const node = block.nodes[x];
-                blockValue += node.value;
                 const nodeLength = node.value.length;
                 position += nodeLength;
 
@@ -282,7 +322,7 @@ window.RichTextEditor = (element) => {
                         nodes[nodes.length - 1].value += value;
                     } else {
                         nodes.push({
-                            element: child,
+                            //element: child,
                             types: types,
                             value: value
                         });
@@ -300,7 +340,7 @@ window.RichTextEditor = (element) => {
             node.append(textNode);
 
             nodes.push({
-                element: textNode,
+                //element: textNode,
                 types: [],
                 value: ''
             });
