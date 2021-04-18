@@ -124,7 +124,7 @@ window.RichTextEditor = (element) => {
             focusIndex = caretPosition.focus;
             anchorIndex = caretPosition.anchor;
         }
-        
+
         const find = (parent, positions, nodeValues = []) => {
             for (let i = 0; i < parent.childNodes.length; i++) {
                 const child = parent.childNodes[i];
@@ -150,9 +150,8 @@ window.RichTextEditor = (element) => {
                     if (positions.anchor && positions.focus) {
                         break;
                     }
-                    
-                    nodeValues.push(value);
 
+                    nodeValues.push(value);
                 } else {
                     positions = find(child, positions, nodeValues);
 
@@ -165,84 +164,54 @@ window.RichTextEditor = (element) => {
 
             return positions;
         };
-        
-        const positions = (find(editorContent, { anchor: null, focus: null }));
 
-        let range = document.createRange();
-        let selection = window.getSelection();
+        const positions = find(editorContent, { anchor: null, focus: null });
+
+        const range = document.createRange();
+        const selection = window.getSelection();
 
         range.setEnd(positions.focus.node, positions.focus.offset);
         range.setStart(positions.anchor.node, positions.anchor.offset);
 
         selection.removeAllRanges();
         selection.addRange(range);
-    }
+    };
 
     const deleteSelected = () => {
-        let firstCaret = Math.min(caretPosition.anchor, caretPosition.focus);
-        let lastCaret = Math.max(caretPosition.anchor, caretPosition.focus);
+        const firstCaret = Math.min(caretPosition.anchor, caretPosition.focus);
+        const lastCaret = Math.max(caretPosition.anchor, caretPosition.focus);
 
-        let position = 0;
+        const firstCaretInfo = getCaretPositionInfo(firstCaret);
+        const lastCaretInfo = getCaretPositionInfo(lastCaret);
 
-        let firstPosition;
-        let lastPosition;
+        if (firstCaretInfo.node === lastCaretInfo.node) {
+            firstCaretInfo.node.value = firstCaretInfo.node.value.substring(0, firstCaretInfo.position) + firstCaretInfo.node.value.substring(lastCaretInfo.position);
+        } else {
+            firstCaretInfo.node.value = firstCaretInfo.node.value.substring(0, firstCaretInfo.position);
+            lastCaretInfo.node.value = lastCaretInfo.node.value.substring(lastCaretInfo.position);
+        }
 
-        let firstBlock;
-        let lastBlock;
+        if (lastCaretInfo.blockIndex - firstCaretInfo.blockIndex > 1) {
+            blocks.splice(firstCaretInfo.blockIndex + 1, lastCaretInfo.blockIndex - (firstCaretInfo.blockIndex + 1));
+        }
 
-        for (let i = 0; i < blocks.length; i++) {
-            if (i > 0) {
-                position++;
-            }
+        if (firstCaretInfo.block === lastCaretInfo.block) {
+            firstCaretInfo.block.nodes.splice(firstCaretInfo.nodeIndex + 1, lastCaretInfo.nodeIndex - (firstCaretInfo.nodeIndex + 1));
+        } else {
+            firstCaretInfo.block.nodes.splice(firstCaretInfo.nodeIndex + 1);
+            lastCaretInfo.block.nodes.splice(0, lastCaretInfo.nodeIndex);
+        }
 
-            const block = blocks[i];
-            for (let x = 0; x < block.nodes.length; x++) {
-                const node = block.nodes[x];
-                position += node.value.length;
+        if (firstCaretInfo.blockIndex !== lastCaretInfo.blockIndex) {
+            let toBeMergedBlock = blocks.splice(firstCaretInfo.blockIndex + 1, 1);
+            firstCaretInfo.block.nodes = [...firstCaretInfo.block.nodes, ...toBeMergedBlock[0].nodes];
+        }
 
-                let firstCaretInNode = false;
-                let lastCaretInNode = false;
-
-                if (firstPosition == null && position >= firstCaret) {
-                    firstBlock = i;
-                    firstCaretInNode = true;
-                    firstPosition = firstCaret - (position - node.value.length);
-                }
-
-                if (lastPosition == null && position >= lastCaret) {
-                    lastBlock = i;
-                    lastCaretInNode = true;
-                    lastPosition = lastCaret - (position - node.value.length);
-                }
-
-                if (firstPosition != null) {
-                    if (firstCaretInNode && lastCaretInNode) {
-                        node.value = node.value.slice(0, firstPosition) + node.value.slice(lastPosition);
-                    } else if (firstCaretInNode && !lastCaretInNode) {
-                        node.value = node.value.slice(0, firstPosition);
-                    } else if (!firstCaretInNode && lastCaretInNode) {
-                        node.value = node.value.slice(lastPosition);
-                    } else if (!firstCaretInNode && !lastCaretInNode) {
-                        block.nodes.splice(x, 1);
-                        x--;
-                    }
-                }
-
-                if (lastCaretInNode) {
-                    i = blocks.length;
-
-                    for (let y = firstBlock + 1; y < lastBlock; y++) {
-                        blocks.splice(y, 1);
-                        lastBlock--;
-                    }
-
-                    if (!(firstCaretInNode && lastCaretInNode)) {
-                        blocks[firstBlock].nodes = [...blocks[firstBlock].nodes, ...blocks[lastBlock].nodes];
-                        blocks.splice(lastBlock, 1);
-                    }
-
-                    break;
-                }
+        for(let i = 0; i < firstCaretInfo.block.nodes.length - 1; i++) {
+            if(equalArrays(firstCaretInfo.block.nodes[i].types, firstCaretInfo.block.nodes[i + 1].types)) {
+                firstCaretInfo.block.nodes[i].value += firstCaretInfo.block.nodes[i + 1].value;
+                firstCaretInfo.block.nodes.splice(i + 1, 1);
+                i--;
             }
         }
     };
