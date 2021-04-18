@@ -206,14 +206,6 @@ window.RichTextEditor = (element) => {
             let toBeMergedBlock = blocks.splice(firstCaretInfo.blockIndex + 1, 1);
             firstCaretInfo.block.nodes = [...firstCaretInfo.block.nodes, ...toBeMergedBlock[0].nodes];
         }
-
-        for(let i = 0; i < firstCaretInfo.block.nodes.length - 1; i++) {
-            if(equalArrays(firstCaretInfo.block.nodes[i].types, firstCaretInfo.block.nodes[i + 1].types)) {
-                firstCaretInfo.block.nodes[i].value += firstCaretInfo.block.nodes[i + 1].value;
-                firstCaretInfo.block.nodes.splice(i + 1, 1);
-                i--;
-            }
-        }
     };
 
     const insertText = (index, value) => {
@@ -275,6 +267,16 @@ window.RichTextEditor = (element) => {
                 nodes: parseNodes(child)
             });
         });
+
+        for(let i = 0; i < blocks.length; i++) {
+            for(let x = 0; x < blocks[i].nodes.length - 1; x++) {
+                if(equalArrays(blocks[i].nodes[x].types, blocks[i].nodes[x + 1].types)) {
+                    blocks[i].nodes[x].value += blocks[i].nodes[x + 1].value;
+                    blocks[i].nodes.splice(x + 1, 1);
+                    x--;
+                }
+            }
+        }
     };
 
     const equalArrays = (first = [], second = []) => first.sort().toString() === second.sort().toString();
