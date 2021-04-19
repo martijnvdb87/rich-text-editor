@@ -268,9 +268,9 @@ window.RichTextEditor = (element) => {
             });
         });
 
-        for(let i = 0; i < blocks.length; i++) {
-            for(let x = 0; x < blocks[i].nodes.length - 1; x++) {
-                if(equalArrays(blocks[i].nodes[x].types, blocks[i].nodes[x + 1].types)) {
+        for (let i = 0; i < blocks.length; i++) {
+            for (let x = 0; x < blocks[i].nodes.length - 1; x++) {
+                if (equalArrays(blocks[i].nodes[x].types, blocks[i].nodes[x + 1].types)) {
                     blocks[i].nodes[x].value += blocks[i].nodes[x + 1].value;
                     blocks[i].nodes.splice(x + 1, 1);
                     x--;
@@ -420,7 +420,49 @@ window.RichTextEditor = (element) => {
             } else {
                 deleteSelected();
             }
+        } else if (e.inputType === 'insertReplacementText') {
+        } else if (e.inputType === 'insertOrderedList') {
+        } else if (e.inputType === 'insertUnorderedList') {
+        } else if (e.inputType === 'insertHorizontalRule') {
+        } else if (e.inputType === 'insertFromYank') {
+        } else if (e.inputType === 'insertFromDrop') {
         } else if (e.inputType === 'insertFromPaste') {
+        } else if (e.inputType === 'insertTranspose') {
+        } else if (e.inputType === 'insertCompositionText') {
+        } else if (e.inputType === 'insertFromComposition') {
+        } else if (e.inputType === 'insertLink') {
+        } else if (e.inputType === 'deleteByComposition') {
+        } else if (e.inputType === 'deleteCompositionText') {
+        } else if (e.inputType === 'deleteWordBackward') {
+        } else if (e.inputType === 'deleteWordForward') {
+        } else if (e.inputType === 'deleteSoftLineBackward') {
+        } else if (e.inputType === 'deleteSoftLineForward') {
+        } else if (e.inputType === 'deleteEntireSoftLine') {
+        } else if (e.inputType === 'deleteHardLineBackward') {
+        } else if (e.inputType === 'deleteHardLineForward') {
+        } else if (e.inputType === 'deleteByDrag') {
+        } else if (e.inputType === 'deleteByCut') {
+        } else if (e.inputType === 'deleteByContent') {
+        } else if (e.inputType === 'historyUndo') {
+        } else if (e.inputType === 'historyRedo') {
+        } else if (e.inputType === 'formatBold') {
+        } else if (e.inputType === 'formatItalic') {
+        } else if (e.inputType === 'formatUnderline') {
+        } else if (e.inputType === 'formatStrikethrough') {
+        } else if (e.inputType === 'formatSuperscript') {
+        } else if (e.inputType === 'formatSubscript') {
+        } else if (e.inputType === 'formatJustifyFull') {
+        } else if (e.inputType === 'formatJustifyCenter') {
+        } else if (e.inputType === 'formatJustifyRight') {
+        } else if (e.inputType === 'formatJustifyLeft') {
+        } else if (e.inputType === 'formatIndent') {
+        } else if (e.inputType === 'formatOutdent') {
+        } else if (e.inputType === 'formatRemove') {
+        } else if (e.inputType === 'formatSetBlockTextDirection') {
+        } else if (e.inputType === 'formatSetInlineTextDirection') {
+        } else if (e.inputType === 'formatBackColor') {
+        } else if (e.inputType === 'formatFontColor') {
+        } else if (e.inputType === 'formatFontName') {
         }
 
         setEditorContent(buildHtml());
