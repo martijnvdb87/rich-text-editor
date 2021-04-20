@@ -293,7 +293,6 @@ window.RichTextEditor = (element) => {
                         nodes[nodes.length - 1].value += value;
                     } else {
                         nodes.push({
-                            //element: child,
                             types: types,
                             value: value
                         });
@@ -311,13 +310,79 @@ window.RichTextEditor = (element) => {
             node.append(textNode);
 
             nodes.push({
-                //element: textNode,
                 types: [],
                 value: ''
             });
         }
 
         return nodes;
+    };
+
+    const splitNode = (caretPosition) => {
+        const { block, node, nodeIndex, position } = getCaretPositionInfo(caretPosition);
+
+        const newNode = { ...node, value: node.value.substring(0, position) };
+        block.nodes.splice(nodeIndex, 0, newNode);
+        node.value = node.value.substring(position);
+    };
+
+    const extractNode = (startPosition, endPosition) => {
+        const start = Math.min(startPosition, endPosition);
+        const end = Math.max(startPosition, endPosition);
+
+        splitNode(start);
+        splitNode(end);
+
+        const nodes = [];
+
+        let position = 0;
+
+        for (let i = 0; i < blocks.length; i++) {
+            const block = blocks[i];
+
+            for (let x = 0; x < block.nodes.length; x++) {
+                const node = block.nodes[x];
+
+                if (start <= position) {
+                    if (node.value !== '') {
+                        nodes.push(node);
+                    }
+                }
+
+                if (end <= position + node.value.length) {
+                    return nodes;
+                }
+
+                position += node.value.length;
+            }
+
+            position++;
+        }
+
+        nodes;
+
+        return nodes;
+    };
+
+    const setInlineStyle = (tag, focus, anchor) => {
+        const nodes = extractNode(focus, anchor);
+
+        const removeTag = nodes.every((node) => {
+            return node.types.includes(tag);
+        });
+
+        if (removeTag) {
+            nodes.map((node) => {
+                node.types = node.types.filter((type) => type !== tag);
+            });
+        } else {
+            nodes.map((node) => {
+                node.types = [...new Set([...node.types, tag])];
+            });
+        }
+
+        setEditorContent(buildHtml());
+        setCaretPosition(focus, anchor);
     };
 
     const getEditorContent = (value) => {
@@ -354,21 +419,25 @@ window.RichTextEditor = (element) => {
 
     editorContent.oninput = (e) => {
         let isCollapsed = caretPosition.anchor == caretPosition.focus;
-        let newCaretPosition = Math.min(caretPosition.anchor, caretPosition.focus);
+        let newCaretPositionFocus = Math.min(caretPosition.anchor, caretPosition.focus);
+        let newCaretPositionAnchor = null;
 
         if (e.inputType === 'insertText') {
             if (!isCollapsed) {
                 deleteSelected();
             }
 
-            insertText(newCaretPosition, e.data);
-            newCaretPosition += e.data.length;
+            insertText(newCaretPositionFocus, e.data);
+            newCaretPositionFocus += e.data.length;
+
+            setEditorContent(buildHtml());
+            setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'insertParagraph') {
             if (!isCollapsed) {
                 deleteSelected();
             }
 
-            let { position, node, nodeIndex, block, blockIndex } = getCaretPositionInfo(newCaretPosition);
+            let { position, node, nodeIndex, block, blockIndex } = getCaretPositionInfo(newCaretPositionFocus);
 
             let firstNode = { ...node };
             let lastNode = { ...node };
@@ -388,7 +457,10 @@ window.RichTextEditor = (element) => {
             blocks.splice(blockIndex, 1, lastBlock);
             blocks.splice(blockIndex, 0, firstBlock);
 
-            newCaretPosition = newCaretPosition + 1;
+            newCaretPositionFocus = newCaretPositionFocus + 1;
+
+            setEditorContent(buildHtml());
+            setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'insertLineBreak') {
         } else if (e.inputType === 'deleteContentBackward') {
             if (isCollapsed) {
@@ -396,7 +468,7 @@ window.RichTextEditor = (element) => {
                 let { block: lastCaretInNode } = getCaretPositionInfo(caretPosition.focus);
 
                 deleteContentBackward();
-                newCaretPosition = caretPosition.focus - 1;
+                newCaretPositionFocus = caretPosition.focus - 1;
 
                 if (firstCaretInNode != lastCaretInNode) {
                     firstCaretInNode.nodes = [...firstCaretInNode.nodes, ...lastCaretInNode.nodes];
@@ -405,13 +477,16 @@ window.RichTextEditor = (element) => {
             } else {
                 deleteSelected();
             }
+
+            setEditorContent(buildHtml());
+            setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'deleteContentForward') {
             if (isCollapsed) {
                 let { block: firstCaretInNode } = getCaretPositionInfo(caretPosition.focus);
                 let { block: lastCaretInNode } = getCaretPositionInfo(caretPosition.focus + 1);
 
                 deleteContentForward();
-                newCaretPosition = caretPosition.focus;
+                newCaretPositionFocus = caretPosition.focus;
 
                 if (firstCaretInNode != lastCaretInNode) {
                     firstCaretInNode.nodes = [...firstCaretInNode.nodes, ...lastCaretInNode.nodes];
@@ -420,6 +495,9 @@ window.RichTextEditor = (element) => {
             } else {
                 deleteSelected();
             }
+
+            setEditorContent(buildHtml());
+            setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'insertReplacementText') {
         } else if (e.inputType === 'insertOrderedList') {
         } else if (e.inputType === 'insertUnorderedList') {
@@ -446,11 +524,17 @@ window.RichTextEditor = (element) => {
         } else if (e.inputType === 'historyUndo') {
         } else if (e.inputType === 'historyRedo') {
         } else if (e.inputType === 'formatBold') {
+            setInlineStyle('B', caretPosition.focus, caretPosition.anchor);
         } else if (e.inputType === 'formatItalic') {
+            setInlineStyle('I', caretPosition.focus, caretPosition.anchor);
         } else if (e.inputType === 'formatUnderline') {
+            setInlineStyle('U', caretPosition.focus, caretPosition.anchor);
         } else if (e.inputType === 'formatStrikethrough') {
+            setInlineStyle('S', caretPosition.focus, caretPosition.anchor);
         } else if (e.inputType === 'formatSuperscript') {
+            setInlineStyle('SUP', caretPosition.focus, caretPosition.anchor);
         } else if (e.inputType === 'formatSubscript') {
+            setInlineStyle('SUB', caretPosition.focus, caretPosition.anchor);
         } else if (e.inputType === 'formatJustifyFull') {
         } else if (e.inputType === 'formatJustifyCenter') {
         } else if (e.inputType === 'formatJustifyRight') {
@@ -465,7 +549,6 @@ window.RichTextEditor = (element) => {
         } else if (e.inputType === 'formatFontName') {
         }
 
-        setEditorContent(buildHtml());
-        setCaretPosition(newCaretPosition);
+        console.log(e.inputType);
     };
 };
