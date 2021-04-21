@@ -125,6 +125,9 @@ window.RichTextEditor = (element) => {
             anchorIndex = caretPosition.anchor;
         }
 
+        const firstIndex = Math.min(focusIndex, anchorIndex);
+        const lastIndex = Math.max(focusIndex, anchorIndex);
+
         const find = (parent, positions, nodeValues = []) => {
             for (let i = 0; i < parent.childNodes.length; i++) {
                 const child = parent.childNodes[i];
@@ -133,17 +136,17 @@ window.RichTextEditor = (element) => {
                     const value = child.nodeValue;
                     const nextNodeValueLength = [...nodeValues, value].join('').length;
 
-                    if (!positions.focus && focusIndex <= nextNodeValueLength) {
+                    if (!positions.focus && lastIndex <= nextNodeValueLength) {
                         positions.focus = {
                             node: child,
-                            offset: focusIndex - nodeValues.join('').length
+                            offset: lastIndex - nodeValues.join('').length
                         };
                     }
 
-                    if (!positions.anchor && anchorIndex <= nextNodeValueLength) {
+                    if (!positions.anchor && firstIndex <= nextNodeValueLength) {
                         positions.anchor = {
                             node: child,
-                            offset: anchorIndex - nodeValues.join('').length
+                            offset: firstIndex - nodeValues.join('').length
                         };
                     }
 
@@ -512,15 +515,26 @@ window.RichTextEditor = (element) => {
         } else if (e.inputType === 'deleteByComposition') {
         } else if (e.inputType === 'deleteCompositionText') {
         } else if (e.inputType === 'deleteWordBackward') {
+            // Crtl + Backspace
         } else if (e.inputType === 'deleteWordForward') {
+            // Crtl + Delete
         } else if (e.inputType === 'deleteSoftLineBackward') {
         } else if (e.inputType === 'deleteSoftLineForward') {
         } else if (e.inputType === 'deleteEntireSoftLine') {
         } else if (e.inputType === 'deleteHardLineBackward') {
         } else if (e.inputType === 'deleteHardLineForward') {
         } else if (e.inputType === 'deleteByDrag') {
+            deleteSelected();
+            setEditorContent(buildHtml());
+            setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'deleteByCut') {
+            deleteSelected();
+            setEditorContent(buildHtml());
+            setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'deleteByContent') {
+            deleteSelected();
+            setEditorContent(buildHtml());
+            setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'historyUndo') {
         } else if (e.inputType === 'historyRedo') {
         } else if (e.inputType === 'formatBold') {
