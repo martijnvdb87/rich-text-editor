@@ -6,6 +6,8 @@ window.RichTextEditor = (element) => {
         focus: null
     };
 
+    let pasteData;
+
     let editor;
     let editorContent;
 
@@ -416,6 +418,11 @@ window.RichTextEditor = (element) => {
 
     createEditor();
 
+    editorContent.onpaste = (e) => {
+        clipboardData = e.clipboardData || window.clipboardData;
+        pasteData = clipboardData.getData('Text').replace(/(\r\n|\n|\r)/gm, ' ');
+    };
+
     editorContent.onkeydown = (e) => {
         getCaretPosition();
     };
@@ -508,6 +515,16 @@ window.RichTextEditor = (element) => {
         } else if (e.inputType === 'insertFromYank') {
         } else if (e.inputType === 'insertFromDrop') {
         } else if (e.inputType === 'insertFromPaste') {
+            if (!isCollapsed) {
+                deleteSelected();
+            }
+            insertText(newCaretPositionFocus, pasteData);
+            newCaretPositionFocus += pasteData.length;
+
+            pasteData = null;
+
+            setEditorContent(buildHtml());
+            setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'insertTranspose') {
         } else if (e.inputType === 'insertCompositionText') {
         } else if (e.inputType === 'insertFromComposition') {
@@ -516,8 +533,18 @@ window.RichTextEditor = (element) => {
         } else if (e.inputType === 'deleteCompositionText') {
         } else if (e.inputType === 'deleteWordBackward') {
             // Crtl + Backspace
+            if (!isCollapsed) {
+                deleteSelected();
+            } else {
+                //let { position, node, nodeIndex, block, blockIndex } = getCaretPositionInfo(newCaretPositionFocus);
+            }
         } else if (e.inputType === 'deleteWordForward') {
             // Crtl + Delete
+            if (!isCollapsed) {
+                deleteSelected();
+            } else {
+
+            }
         } else if (e.inputType === 'deleteSoftLineBackward') {
         } else if (e.inputType === 'deleteSoftLineForward') {
         } else if (e.inputType === 'deleteEntireSoftLine') {
