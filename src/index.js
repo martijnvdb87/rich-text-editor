@@ -6,7 +6,7 @@ window.RichTextEditor = (element) => {
         focus: null
     };
 
-    let pasteData;
+    let activeData;
 
     let editor;
     let editorContent;
@@ -77,7 +77,7 @@ window.RichTextEditor = (element) => {
         return { anchorNode, focusNode, anchorOffset, focusOffset };
     };
 
-    const getCaretPosition = () => {
+    const getCaretPosition = (setGlobal = true) => {
         let { anchorNode, focusNode, anchorOffset, focusOffset } = currentTextNode();
 
         const find = (parent, positions, nodeValues = []) => {
@@ -113,9 +113,13 @@ window.RichTextEditor = (element) => {
             return positions;
         };
 
-        caretPosition = find(editorContent, { anchor: null, focus: null });
+        const currentCaretPosition = find(editorContent, { anchor: null, focus: null });
 
-        return caretPosition;
+        if(setGlobal) {
+            caretPosition = currentCaretPosition;
+        }
+
+        return currentCaretPosition;
     };
 
     const setCaretPosition = (focusIndex = null, anchorIndex = null) => {
@@ -420,7 +424,7 @@ window.RichTextEditor = (element) => {
 
     editorContent.onpaste = (e) => {
         clipboardData = e.clipboardData || window.clipboardData;
-        pasteData = clipboardData.getData('Text').replace(/(\r\n|\n|\r)/gm, ' ');
+        activeData = clipboardData.getData('Text').replace(/(\r\n|\n|\r)/gm, ' ');
     };
 
     editorContent.onkeydown = (e) => {
@@ -430,7 +434,7 @@ window.RichTextEditor = (element) => {
     editorContent.oninput = (e) => {
         let isCollapsed = caretPosition.anchor == caretPosition.focus;
         let newCaretPositionFocus = Math.min(caretPosition.anchor, caretPosition.focus);
-        let newCaretPositionAnchor = null;
+        let newCaretPositionAnchor = Math.max(caretPosition.anchor, caretPosition.focus);
 
         if (e.inputType === 'insertText') {
             if (!isCollapsed) {
@@ -472,7 +476,7 @@ window.RichTextEditor = (element) => {
             setEditorContent(buildHtml());
             setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'insertLineBreak') {
-        } else if (e.inputType === 'deleteContentBackward') {
+        } else if (['deleteContentBackward', 'deleteWordBackward', 'deleteHardLineBackward', 'deleteSoftLineBackward'].includes(e.inputType)) {
             if (isCollapsed) {
                 let { block: firstCaretInNode } = getCaretPositionInfo(caretPosition.focus - 1);
                 let { block: lastCaretInNode } = getCaretPositionInfo(caretPosition.focus);
@@ -490,7 +494,7 @@ window.RichTextEditor = (element) => {
 
             setEditorContent(buildHtml());
             setCaretPosition(newCaretPositionFocus);
-        } else if (e.inputType === 'deleteContentForward') {
+        } else if (['deleteContentForward', 'deleteWordForward', 'deleteHardLineForward', 'deleteSoftLineForward'].includes(e.inputType)) {
             if (isCollapsed) {
                 let { block: firstCaretInNode } = getCaretPositionInfo(caretPosition.focus);
                 let { block: lastCaretInNode } = getCaretPositionInfo(caretPosition.focus + 1);
@@ -508,62 +512,23 @@ window.RichTextEditor = (element) => {
 
             setEditorContent(buildHtml());
             setCaretPosition(newCaretPositionFocus);
-        } else if (e.inputType === 'insertReplacementText') {
-        } else if (e.inputType === 'insertOrderedList') {
-        } else if (e.inputType === 'insertUnorderedList') {
-        } else if (e.inputType === 'insertHorizontalRule') {
-        } else if (e.inputType === 'insertFromYank') {
-        } else if (e.inputType === 'insertFromDrop') {
         } else if (e.inputType === 'insertFromPaste') {
             if (!isCollapsed) {
                 deleteSelected();
             }
-            insertText(newCaretPositionFocus, pasteData);
-            newCaretPositionFocus += pasteData.length;
+            insertText(newCaretPositionFocus, activeData);
+            newCaretPositionFocus += activeData.length;
 
-            pasteData = null;
-
-            setEditorContent(buildHtml());
-            setCaretPosition(newCaretPositionFocus);
-        } else if (e.inputType === 'insertTranspose') {
-        } else if (e.inputType === 'insertCompositionText') {
-        } else if (e.inputType === 'insertFromComposition') {
-        } else if (e.inputType === 'insertLink') {
-        } else if (e.inputType === 'deleteByComposition') {
-        } else if (e.inputType === 'deleteCompositionText') {
-        } else if (e.inputType === 'deleteWordBackward') {
-            // Crtl + Backspace
-            if (!isCollapsed) {
-                deleteSelected();
-            } else {
-                //let { position, node, nodeIndex, block, blockIndex } = getCaretPositionInfo(newCaretPositionFocus);
-            }
-        } else if (e.inputType === 'deleteWordForward') {
-            // Crtl + Delete
-            if (!isCollapsed) {
-                deleteSelected();
-            } else {
-
-            }
-        } else if (e.inputType === 'deleteSoftLineBackward') {
-        } else if (e.inputType === 'deleteSoftLineForward') {
-        } else if (e.inputType === 'deleteEntireSoftLine') {
-        } else if (e.inputType === 'deleteHardLineBackward') {
-        } else if (e.inputType === 'deleteHardLineForward') {
-        } else if (e.inputType === 'deleteByDrag') {
-            deleteSelected();
             setEditorContent(buildHtml());
             setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'deleteByCut') {
             deleteSelected();
             setEditorContent(buildHtml());
             setCaretPosition(newCaretPositionFocus);
-        } else if (e.inputType === 'deleteByContent') {
-            deleteSelected();
-            setEditorContent(buildHtml());
-            setCaretPosition(newCaretPositionFocus);
         } else if (e.inputType === 'historyUndo') {
+            // Not implemented
         } else if (e.inputType === 'historyRedo') {
+            // Not implemented
         } else if (e.inputType === 'formatBold') {
             setInlineStyle('B', caretPosition.focus, caretPosition.anchor);
         } else if (e.inputType === 'formatItalic') {
@@ -576,20 +541,12 @@ window.RichTextEditor = (element) => {
             setInlineStyle('SUP', caretPosition.focus, caretPosition.anchor);
         } else if (e.inputType === 'formatSubscript') {
             setInlineStyle('SUB', caretPosition.focus, caretPosition.anchor);
-        } else if (e.inputType === 'formatJustifyFull') {
-        } else if (e.inputType === 'formatJustifyCenter') {
-        } else if (e.inputType === 'formatJustifyRight') {
-        } else if (e.inputType === 'formatJustifyLeft') {
-        } else if (e.inputType === 'formatIndent') {
-        } else if (e.inputType === 'formatOutdent') {
-        } else if (e.inputType === 'formatRemove') {
-        } else if (e.inputType === 'formatSetBlockTextDirection') {
-        } else if (e.inputType === 'formatSetInlineTextDirection') {
-        } else if (e.inputType === 'formatBackColor') {
-        } else if (e.inputType === 'formatFontColor') {
-        } else if (e.inputType === 'formatFontName') {
+        } else {
+            // Everything else that is not implemented
+            setEditorContent(buildHtml());
+            setCaretPosition(newCaretPositionFocus);
         }
 
-        console.log(e.inputType);
+        activeData = null;
     };
 };
