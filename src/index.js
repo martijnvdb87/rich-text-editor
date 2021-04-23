@@ -5,6 +5,10 @@ window.RichTextEditor = (element) => {
         anchor: null,
         focus: null
     };
+    
+    const allowedBlockStyles = {
+        textAlign: ['left', 'center', 'right', 'justify'],
+    };
 
     let activeData;
 
@@ -18,6 +22,10 @@ window.RichTextEditor = (element) => {
 
         blocks.forEach((block) => {
             const newBlock = document.createElement(block.type);
+            
+            Object.keys(block.style).forEach(style => {
+                newBlock.style[style] = block.style[style];
+            });
 
             let blockValue = [];
 
@@ -271,8 +279,16 @@ window.RichTextEditor = (element) => {
         blocks = [];
 
         [...content.children].forEach((child) => {
+            const styles = {};
+            Object.keys(child.style).forEach(style => {
+                if(Object.keys(allowedBlockStyles).includes(style) && allowedBlockStyles[style].includes(child.style[style])) {
+                    styles[style] = child.style[style];
+                }
+            });
+
             blocks.push({
                 type: child.nodeName,
+                style: styles,
                 nodes: parseNodes(child)
             });
         });
