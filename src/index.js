@@ -278,7 +278,33 @@ window.RichTextEditor = (element) => {
 
         blocks = [];
 
-        [...content.children].forEach((child) => {
+        contentBlocks = [];
+
+        const findBlock = (child, path = []) => {
+            if(child.nodeType === 1) {
+                if(['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P', 'TD'].includes(child.nodeName)) {
+                    contentBlocks.push({
+                        element: child,
+                        path: path
+                    });
+                } else {
+                    path = [...path, child];
+                    if(child.children) {
+                        [...child.children].forEach(child => {
+                            findBlock(child, path);
+                        });
+                    }
+                }
+            }
+        }
+
+        [...content.children].forEach(child => {
+            findBlock(child);
+        });
+
+        contentBlocks.forEach((contentBlock) => {
+            const child = contentBlock.element;
+
             const styles = {};
             Object.keys(child.style).forEach((style) => {
                 if (Object.keys(allowedBlockStyles).includes(style) && allowedBlockStyles[style].includes(child.style[style])) {
@@ -288,6 +314,7 @@ window.RichTextEditor = (element) => {
 
             blocks.push({
                 type: child.nodeName,
+                path: contentBlock.path,
                 style: styles,
                 nodes: parseNodes(child)
             });
