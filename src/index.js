@@ -5,9 +5,9 @@ window.RichTextEditor = (element) => {
         anchor: null,
         focus: null
     };
-    
+
     const allowedBlockStyles = {
-        textAlign: ['left', 'center', 'right', 'justify'],
+        textAlign: ['left', 'center', 'right', 'justify']
     };
 
     let activeData;
@@ -22,8 +22,8 @@ window.RichTextEditor = (element) => {
 
         blocks.forEach((block) => {
             const newBlock = document.createElement(block.type);
-            
-            Object.keys(block.style).forEach(style => {
+
+            Object.keys(block.style).forEach((style) => {
                 newBlock.style[style] = block.style[style];
             });
 
@@ -123,7 +123,7 @@ window.RichTextEditor = (element) => {
 
         const currentCaretPosition = find(editorContent, { anchor: null, focus: null });
 
-        if(setGlobal) {
+        if (setGlobal) {
             caretPosition = currentCaretPosition;
         }
 
@@ -280,8 +280,8 @@ window.RichTextEditor = (element) => {
 
         [...content.children].forEach((child) => {
             const styles = {};
-            Object.keys(child.style).forEach(style => {
-                if(Object.keys(allowedBlockStyles).includes(style) && allowedBlockStyles[style].includes(child.style[style])) {
+            Object.keys(child.style).forEach((style) => {
+                if (Object.keys(allowedBlockStyles).includes(style) && allowedBlockStyles[style].includes(child.style[style])) {
                     styles[style] = child.style[style];
                 }
             });
